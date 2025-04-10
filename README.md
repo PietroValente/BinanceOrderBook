@@ -10,6 +10,6 @@ The goal of the project is to simulate the behavior of a trading platform's matc
     &nbsp;
     &nbsp;
     &nbsp;
-        <a href="https://github.com/PietroValente/BinanceOrderBook/blob/main/images/Binance.png"><img src="https://github.com/PietroValente/BinanceOrderBook/blob/main/images/Binance.png" alt="" width="200px"></a>
+        <a href="https://github.com/PietroValente/BinanceOrderBook/blob/main/images/ProgramExecution.png"><img src="https://github.com/PietroValente/BinanceOrderBook/blob/main/images/ProgramExecution.png" alt="" width="200px"></a>
 </p>
 &nbsp;
