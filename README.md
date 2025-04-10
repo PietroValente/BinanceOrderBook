@@ -22,7 +22,7 @@ Windows system
 3. Open a terminal in the folder
 4. In the build folder -> build and compile the files:
 
-   cmake .. 
+   cmake ..  
    cmake --build .  
   
 5. Executive file will be in BinanceOrderBook->build->Debug:
