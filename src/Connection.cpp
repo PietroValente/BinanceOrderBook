@@ -116,8 +116,7 @@ std::string Connection::getJson(const std::string& path) {
                     std::cerr << "Content-Length header missing." << std::endl;
                     return "";
                 }
-
-                std::cout << buffer << std::endl;
+                
                 payload.append(buffer + headerEndPos, bytesRead - headerEndPos);
             }
         } else {
