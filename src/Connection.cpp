@@ -126,7 +126,7 @@ void Connection::sendWebSocketMessage() {
     if (SSL_write(ssl, frame, sizeof(frame)) <= 0) {
         std::cerr << "Failed to send WebSocket message." << std::endl;
     }
-    delete frame;
+    delete[] frame;
 }
 
 std::string Connection::receiveWebSocketMessage() {
