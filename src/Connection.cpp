@@ -1,11 +1,33 @@
 #include <iostream>
 #include <sstream>
-#include <ws2tcpip.h>
+
+#ifdef _WIN32
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #pragma comment(lib, "Ws2_32.lib")
+    typedef SOCKET socket_t;
+    #define CLOSE_SOCKET closesocket
+    #define SOCKET_INIT() WSAStartup(MAKEWORD(2, 2), &wsaData)
+    #define SOCKET_CLEANUP() WSACleanup()
+    #define INVALID_SOCKET_VAL INVALID_SOCKET
+#else
+    #include <unistd.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    typedef int socket_t;
+    #define CLOSE_SOCKET close
+    #define SOCKET_INIT() 0
+    #define SOCKET_CLEANUP() do {} while (0)
+    #define INVALID_SOCKET_VAL -1
+#endif
 
 #include "Connection.h"
 
 Connection::Connection(const std::string& host, const std::string& port)
-    : host(host), port(port), ctx(nullptr), ssl(nullptr), sockfd(INVALID_SOCKET), server(nullptr) {}
+    : host(host), port(port), ctx(nullptr), ssl(nullptr), sockfd(INVALID_SOCKET_VAL), server(nullptr) {}
 
 Connection::~Connection() {
     cleanup();
@@ -16,19 +38,21 @@ void Connection::cleanup() {
         SSL_shutdown(ssl);
         SSL_free(ssl);
     }
-    if (sockfd != INVALID_SOCKET) {
-        closesocket(sockfd);
+    if (sockfd != INVALID_SOCKET_VAL) {
+        CLOSE_SOCKET(sockfd);
     }
-    WSACleanup();
+    SOCKET_CLEANUP();
     if (ctx) {
         SSL_CTX_free(ctx);
     }
 }
 
 bool Connection::setup() {
+#ifdef _WIN32
     WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "WSAStartup failed\n";
+#endif
+    if (SOCKET_INIT() != 0) {
+        std::cerr << "Socket initialization failed\n";
         return false;
     }
 
@@ -36,17 +60,20 @@ bool Connection::setup() {
     SSL_load_error_strings();
     const SSL_METHOD* method = TLS_client_method();
     ctx = SSL_CTX_new(method);
-    if (!ctx) return false;
-
-    sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sockfd == INVALID_SOCKET) {
-        std::cerr << "socket failed\n";
+    if (!ctx) {
+        std::cerr << "Failed to create SSL_CTX\n";
         return false;
     }
 
-    struct addrinfo hints = {};
+    sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sockfd == INVALID_SOCKET_VAL) {
+        std::cerr << "Socket creation failed\n";
+        return false;
+    }
+
+    struct addrinfo hints {};
     struct addrinfo* result = nullptr;
-    hints.ai_family = AF_INET; // IPv4 only
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
@@ -59,7 +86,7 @@ bool Connection::setup() {
     res = connect(sockfd, result->ai_addr, static_cast<int>(result->ai_addrlen));
     freeaddrinfo(result);
     if (res != 0) {
-        std::cerr << "connect failed\n";
+        std::cerr << "Connect failed\n";
         return false;
     }
 
@@ -69,6 +96,7 @@ bool Connection::setup() {
         std::cerr << "SSL_connect failed\n";
         return false;
     }
+
     return true;
 }
 
@@ -84,46 +112,37 @@ std::string Connection::getJson(const std::string& path) {
         return "";
     }
 
-    int bytesRead = 0;
-    int totalBytesRead = 0;
-    size_t contentLength = -1;
     char buffer[4096];
     std::string payload;
     bool foundHeaderEnd = false;
+    size_t contentLength = -1;
 
-    while ((bytesRead = SSL_read(ssl, buffer, sizeof(buffer))) > 0) {
-        totalBytesRead += bytesRead;
+    while (true) {
+        int bytesRead = SSL_read(ssl, buffer, sizeof(buffer));
+        if (bytesRead <= 0) break;
 
         if (!foundHeaderEnd) {
-            size_t headerEndPos = totalBytesRead;
-            for (size_t i = 0; i < totalBytesRead - 3; i++) {
-                if (buffer[i] == '\r' && buffer[i + 1] == '\n' && buffer[i + 2] == '\r' && buffer[i + 3] == '\n') {
-                    headerEndPos = i + 4;
-                    foundHeaderEnd = true;
-                    break;
-                }
-            }
+            std::string headers(buffer, bytesRead);
+            size_t pos = headers.find("\r\n\r\n");
+            if (pos != std::string::npos) {
+                foundHeaderEnd = true;
 
-            if (foundHeaderEnd) {
-                for (size_t i = 0; i < headerEndPos - 4; i++) {
-                    if (strstr(buffer + i, "Content-Length: ") == buffer + i) {
-                        contentLength = atoi(buffer + i + 15);
-                        break;
-                    }
-                }
-
-                if (contentLength == -1) {
+                size_t clPos = headers.find("Content-Length: ");
+                if (clPos != std::string::npos) {
+                    contentLength = std::stoi(headers.substr(clPos + 16));
+                } else {
                     std::cerr << "Content-Length header missing." << std::endl;
                     return "";
                 }
-                
-                payload.append(buffer + headerEndPos, bytesRead - headerEndPos);
+
+                size_t bodyStart = pos + 4;
+                payload += headers.substr(bodyStart);
             }
         } else {
             payload.append(buffer, bytesRead);
         }
 
-        if (payload.length() >= contentLength) {
+        if (contentLength != -1 && payload.length() >= contentLength) {
             break;
         }
     }
