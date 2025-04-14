@@ -1,5 +1,4 @@
 #pragma once
-#include <string>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
@@ -28,16 +27,20 @@
 
 class Connection {
 public:
-    Connection(const std::string& host, const std::string& port = "443");
+    Connection(const std::string& host, const std::string& port, const std::string& symbol);
     ~Connection();
     bool setup();
-    std::string getPayload(const std::string& path);
     void cleanup();
+    void sendWebSocketMessage();
+    std::string receiveWebSocketMessage();
+
 private:
     std::string host;
     std::string port;
+    std::string symbol;
+    std::string subscribeMessage;
     SSL_CTX* ctx;
     SSL* ssl;
     socket_t sockfd;
-    struct hostent* server;
+    bool performWebSocketHandshake();
 };

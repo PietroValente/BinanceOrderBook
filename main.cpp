@@ -1,7 +1,4 @@
 #include <iostream>
-#include <string>
-#include <thread>
-#include <chrono>
 
 #include "Connection.h"
 #include "Parser.h"
@@ -12,19 +9,23 @@ int main() {
     Bid b;
     Ask a;
     Parser p;
-    std::string symbol = "BTCUSDT";
-    Connection client("api.binance.com");
+    const std::string symbol = "btcusdt";
+    Connection client("stream.binance.com", "9443", symbol);
 
     if (!client.setup()) {
         std::cerr << "Setup failed\n";
         return 1;
     }
 
+    client.sendWebSocketMessage();
+
     while(1){
-        std::string payload = client.getPayload("/api/v3/depth?symbol="+symbol+"&limit=5000");
+        std::string payload = client.receiveWebSocketMessage();
         std::vector<Parser::PriceLevel> req = p.parseOrderBookUpdate(payload);
 
         for(int i=0; i<req.size(); ++i){
+            //assume all price has same length and use first one as sample
+            if(req[i].price.size() != req[0].price.size()) continue;
             if(req[i].type == "ask"){
                 if(req[i].quantity == 0){
                     a.remove(req[i].price);
@@ -51,7 +52,6 @@ int main() {
         std::cout << "       MARKET PRICE        " << std::endl;
         std::cout << "---------------------------" << std::endl;
         b.showTop5();
-        std::this_thread::sleep_for(std::chrono::milliseconds(200)); //avoid http 418 I'm teapot
     }
     return 0;
 }

@@ -1,10 +1,15 @@
 #include <iostream>
 #include <sstream>
+#include <cstdlib>
+#include <cstring>
+#include <openssl/applink.c>
 
 #include "Connection.h"
 
-Connection::Connection(const std::string& host, const std::string& port)
-    : host(host), port(port), ctx(nullptr), ssl(nullptr), sockfd(INVALID_SOCKET_VAL), server(nullptr) {}
+Connection::Connection(const std::string& host, const std::string& port, const std::string& symbol)
+    : host(host), port(port), symbol(symbol), ctx(nullptr), ssl(nullptr), sockfd(INVALID_SOCKET_VAL) {
+        subscribeMessage = "{\"method\": \"SUBSCRIBE\", \"params\": [\""+ symbol +"@depth@100ms\"], \"id\": 1}";
+    }
 
 Connection::~Connection() {
     cleanup();
@@ -23,6 +28,39 @@ void Connection::cleanup() {
         SSL_CTX_free(ctx);
     }
 }
+
+bool Connection::performWebSocketHandshake() {
+    std::string webSocketKey = "dGhlIHNhbXBsZSBub25jZQ==";
+    std::ostringstream request;
+
+    request << "GET /ws/"+ symbol +"@depth@100ms HTTP/1.1\r\n";
+    request << "Host: " << host << "\r\n";
+    request << "Connection: Upgrade\r\n";
+    request << "Upgrade: websocket\r\n";
+    request << "Sec-WebSocket-Key: " << webSocketKey << "\r\n";
+    request << "Sec-WebSocket-Version: 13\r\n";
+    request << "\r\n";
+
+    if (SSL_write(ssl, request.str().c_str(), static_cast<int>(request.str().length())) <= 0) {
+        std::cerr << "Failed to send WebSocket handshake request." << std::endl;
+        return false;
+    }
+
+    char buffer[4096];
+    int bytesRead = SSL_read(ssl, buffer, sizeof(buffer));
+    if (bytesRead <= 0) {
+        std::cerr << "Failed to receive WebSocket handshake response." << std::endl;
+        return false;
+    }
+
+    std::string response(buffer, bytesRead);
+    if (response.find("Sec-WebSocket-Accept") == std::string::npos) {
+        std::cerr << "Invalid WebSocket handshake response." << std::endl;
+        return false;
+    }
+    return true;
+}
+
 
 bool Connection::setup() {
 #ifdef _WIN32
@@ -74,55 +112,55 @@ bool Connection::setup() {
         return false;
     }
 
+    if (!performWebSocketHandshake()) {
+        std::cerr << "WebSocket handshake failed.\n";
+        return false;
+    }
+
     return true;
 }
 
-std::string Connection::getPayload(const std::string& path) {
-    std::ostringstream request;
-    request << "GET " << path << " HTTP/1.1\r\n";
-    request << "Host: " << host << "\r\n";
-    request << "Connection: keep-alive\r\n";
-    request << "\r\n";
-
-    if (SSL_write(ssl, request.str().c_str(), static_cast<int>(request.str().length())) <= 0) {
-        std::cerr << "Failed to send the request." << std::endl;
-        return "";
+void Connection::sendWebSocketMessage() {
+    unsigned char* frame = new unsigned char[1 + subscribeMessage.size()];
+    frame[0] = 0x81;
+    std::copy(subscribeMessage.begin(), subscribeMessage.end(), frame + 1);
+    if (SSL_write(ssl, frame, sizeof(frame)) <= 0) {
+        std::cerr << "Failed to send WebSocket message." << std::endl;
     }
+    delete frame;
+}
 
-    char buffer[4096];
-    std::string payload;
-    bool foundHeaderEnd = false;
-    size_t contentLength = -1;
+std::string Connection::receiveWebSocketMessage() {
+    unsigned char buffer[4096];
+    std::string completePayload;
+    bool isPayloadComplete = false;
+    std::size_t start;
 
-    while (true) {
+    while (!isPayloadComplete) {
         int bytesRead = SSL_read(ssl, buffer, sizeof(buffer));
-        if (bytesRead <= 0) break;
-
-        if (!foundHeaderEnd) {
-            std::string headers(buffer, bytesRead);
-            size_t pos = headers.find("\r\n\r\n");
-            if (pos != std::string::npos) {
-                foundHeaderEnd = true;
-
-                size_t clPos = headers.find("Content-Length: ");
-                if (clPos != std::string::npos) {
-                    contentLength = std::stoi(headers.substr(clPos + 16));
-                } else {
-                    std::cerr << "Content-Length header missing." << std::endl;
-                    return "";
-                }
-
-                size_t bodyStart = pos + 4;
-                payload += headers.substr(bodyStart);
+        if (bytesRead <= 0) {
+            int sslError = SSL_get_error(ssl, bytesRead);
+            if (sslError != SSL_ERROR_WANT_READ || sslError != SSL_ERROR_WANT_WRITE) {
+                std::cerr << "Failed to read WebSocket frame. SSL error code: " << sslError << std::endl;
+                cleanup();
+                #ifdef _WIN32
+                WSACleanup();
+                #endif
+                ERR_print_errors_fp(stderr);
+                std::exit(EXIT_FAILURE);
             }
-        } else {
-            payload.append(buffer, bytesRead);
+            else continue;
         }
-
-        if (contentLength != -1 && payload.length() >= contentLength) {
-            break;
+        completePayload.append(reinterpret_cast<char*>(buffer), bytesRead);
+        if(completePayload.find("{") == std::string::npos){
+            completePayload.clear(); 
+        }
+        else{
+            start = completePayload.find("{");
+        }
+        if (!completePayload.empty() && completePayload.back() == '}') {
+            isPayloadComplete = true;
         }
     }
-
-    return payload;
+    return completePayload.substr(start);
 }
