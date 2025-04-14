@@ -72,7 +72,7 @@ The goal of the project is to simulate the behavior of a trading platform's matc
 
        brew --prefix openssl
 
-    Modify the variable 
+    Modify the variable  
    ...  
    set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl@3") #set your directory  
    ...  
