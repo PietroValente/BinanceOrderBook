@@ -139,7 +139,7 @@ std::string Connection::receiveWebSocketMessage() {
         int bytesRead = SSL_read(ssl, buffer, sizeof(buffer));
         if (bytesRead <= 0) {
             int sslError = SSL_get_error(ssl, bytesRead);
-            if (sslError != SSL_ERROR_WANT_READ || sslError != SSL_ERROR_WANT_WRITE) {
+            if (sslError != SSL_ERROR_WANT_READ && sslError != SSL_ERROR_WANT_WRITE) {
                 std::cerr << "Failed to read WebSocket frame. SSL error code: " << sslError << std::endl;
                 cleanup();
                 #ifdef _WIN32
@@ -150,6 +150,13 @@ std::string Connection::receiveWebSocketMessage() {
             }
             else continue;
         }
+        unsigned char opcode = buffer[0] & 0x0F;
+        if (bytesRead<15 && opcode == 0x9) {
+            size_t payload_len = buffer[1] & 0x7F;
+            SSL_write(ssl, buffer, static_cast<int>(payload_len));
+            continue;
+        }
+
         completePayload.append(reinterpret_cast<char*>(buffer), bytesRead);
         if(completePayload.find("{") == std::string::npos){
             completePayload.clear(); 
