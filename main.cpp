@@ -43,6 +43,9 @@ int main() {
         std::cout << "       MARKET PRICE        " << std::endl;
         std::cout << "---------------------------" << std::endl;
         b.showTop5();
+        std::cout << "---------------------------" << std::endl;
+        std::cout << req[1].price << " a " << req[1].quantity << std::endl;
+        std::cout << req[0].price << " b " << req[0].quantity << std::endl;
     }
     return 0;
 }
