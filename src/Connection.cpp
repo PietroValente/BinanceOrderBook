@@ -112,6 +112,7 @@ std::string Connection::getPayload(const std::string& path) {
                     return "";
                 }
 
+                std::cout << buffer;
                 size_t bodyStart = pos + 4;
                 payload += headers.substr(bodyStart);
             }

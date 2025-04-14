@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <thread>
+#include <chrono>
 
 #include "Connection.h"
 #include "Parser.h"
@@ -49,6 +51,7 @@ int main() {
         std::cout << "       MARKET PRICE        " << std::endl;
         std::cout << "---------------------------" << std::endl;
         b.showTop5();
+        std::this_thread::sleep_for(std::chrono::milliseconds(200)); //avoid http 418 I'm teapot
     }
     return 0;
 }
