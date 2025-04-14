@@ -28,4 +28,30 @@ Windows system
 5. Executive file will be in BinanceOrderBook->build->Debug:
 
    .\main 
+
+  Linux/macOS system
+
+1. Install Command Line Developer Tools
+
+       sudo xcode-select --install  
+
+2. Install Homebrew
+
+       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+3. Install CMake
+
+       brew install cmake
   
+4. Install CMake
+
+       brew install openssl
+   
+6. In the build folder -> build and compile the files:
+
+   cmake ..  
+   cmake --build .  
+  
+7. Executive file will be in BinanceOrderBook->build->Debug:
+
+   .\main 
