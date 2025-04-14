@@ -2,7 +2,6 @@
 #include <sstream>
 #include <cstdlib>
 #include <cstring>
-#include <openssl/applink.c>
 
 #include "Connection.h"
 
