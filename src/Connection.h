@@ -31,7 +31,7 @@ public:
     Connection(const std::string& host, const std::string& port = "443");
     ~Connection();
     bool setup();
-    std::string getJson(const std::string& path);
+    std::string getPayload(const std::string& path);
     void cleanup();
 private:
     std::string host;

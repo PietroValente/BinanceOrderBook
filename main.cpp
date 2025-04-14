@@ -19,20 +19,26 @@ int main() {
     }
 
     while(1){
-        std::string json = client.getJson("/api/v3/depth?symbol="+symbol+"&limit=1");
-        std::vector<Parser::PriceLevel> req = p.parseOrderBookUpdate(json);
+        std::string payload = client.getPayload("/api/v3/depth?symbol="+symbol+"&limit=5000");
+        std::vector<Parser::PriceLevel> req = p.parseOrderBookUpdate(payload);
 
-        if(req[0].quantity == 0){ //process bid
-            b.remove(req[0].price);
-        }
-        else if(req[0].quantity != -1){
-            b.insert(req[0].price, req[0].quantity);
-        }
-        if(req[1].quantity == 0){ //process ask
-            a.remove(req[1].price);
-        }
-        else if(req[1].quantity != -1){
-            a.insert(req[1].price, req[1].quantity);
+        for(int i=0; i<req.size(); ++i){
+            if(req[i].type == "ask"){
+                if(req[i].quantity == 0){
+                    a.remove(req[i].price);
+                }
+                else{
+                    a.insert(req[i].price, req[i].quantity);
+                }
+            }
+            else if(req[i].type == "bid"){
+                if(req[i].quantity == 0){
+                    b.remove(req[i].price);
+                }
+                else{
+                    b.insert(req[i].price, req[i].quantity);
+                }
+            }
         }
 
         //print
@@ -43,9 +49,6 @@ int main() {
         std::cout << "       MARKET PRICE        " << std::endl;
         std::cout << "---------------------------" << std::endl;
         b.showTop5();
-        std::cout << "---------------------------" << std::endl;
-        std::cout << req[1].price << " a " << req[1].quantity << std::endl;
-        std::cout << req[0].price << " b " << req[0].quantity << std::endl;
     }
     return 0;
 }

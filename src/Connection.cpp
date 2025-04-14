@@ -77,7 +77,7 @@ bool Connection::setup() {
     return true;
 }
 
-std::string Connection::getJson(const std::string& path) {
+std::string Connection::getPayload(const std::string& path) {
     std::ostringstream request;
     request << "GET " << path << " HTTP/1.1\r\n";
     request << "Host: " << host << "\r\n";
