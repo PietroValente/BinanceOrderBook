@@ -15,21 +15,21 @@ The goal of the project is to simulate the behavior of a trading platform's matc
 &nbsp;
 
 ## Usability
-Windows system
+### Windows system
 
 1. Install OpenSSL from https://slproweb.com/products/Win32OpenSSL.html (no light version)
 2. BinanceOrderBook -> CMakeLists and set the path to OpenSSL folder
 3. Open a terminal in the folder
 4. In the build folder -> build and compile the files:
 
-   cmake ..  
-   cmake --build .  
+       cmake ..
+       cmake --build .  
   
-5. Executive file will be in BinanceOrderBook->build->Debug:
+6. Executive file will be in BinanceOrderBook->build->Debug:
 
-   .\main 
+        .\main  
 
-  Linux/macOS system
+Linux/macOS system
 
 1. Install Command Line Developer Tools
 
@@ -43,7 +43,7 @@ Windows system
 
        brew install cmake
   
-4. Install CMake
+4. Install openSSL
 
        brew install openssl
    
