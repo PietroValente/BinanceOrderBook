@@ -26,8 +26,8 @@ The goal of the project is to simulate the behavior of a trading platform's matc
 3. BinanceOrderBook -> CMakeLists and set the path to OpenSSL folder
 
    ...  
-   set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64") #set your directory
-   ...
+   set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64") #set your directory  
+   ...  
    
 6. Create the build folder
 
@@ -74,8 +74,8 @@ The goal of the project is to simulate the behavior of a trading platform's matc
 
     Modify the variable 
    ...  
-   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl@3") #set your directory
-   ...
+   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl@3") #set your directory  
+   ...  
    
 6. Create the build folder
 
