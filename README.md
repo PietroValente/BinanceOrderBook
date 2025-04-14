@@ -18,18 +18,33 @@ The goal of the project is to simulate the behavior of a trading platform's matc
 ### Windows system
 
 1. Install OpenSSL from https://slproweb.com/products/Win32OpenSSL.html (no light version)
-2. BinanceOrderBook -> CMakeLists and set the path to OpenSSL folder
-3. Open a terminal in the folder
-4. In the build folder -> build and compile the files:
+2. Clone the folder
+
+       git clone https://github.com/PietroValente/BinanceOrderBook.git
+       cd BinanceOrderBook
+   
+3. BinanceOrderBook -> CMakeLists and set the path to OpenSSL folder
+
+   ...  
+   set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64") #set your directory
+   ...
+   
+6. Create the build folder
+
+       mkdir build
+       cd build
+   
+7. Build & compile the files:
 
        cmake ..
        cmake --build .  
   
-6. Executive file will be in BinanceOrderBook->build->Debug:
+8. Run the main:
 
+        cd Debug
         .\main  
 
-Linux/macOS system
+### Linux/macOS system
 
 1. Install Command Line Developer Tools
 
@@ -43,15 +58,35 @@ Linux/macOS system
 
        brew install cmake
   
-4. Install openSSL
+4. Install OpenSSL
 
        brew install openssl
    
-6. In the build folder -> build and compile the files:
+5. Clone the folder
 
-   cmake ..  
-   cmake --build .  
+       git clone https://github.com/PietroValente/BinanceOrderBook.git
   
-7. Executive file will be in BinanceOrderBook->build->Debug:
+3. BinanceOrderBook -> CMakeLists and set the path to OpenSSL folder
 
-   .\main 
+   Find the folder of OpenSSL running:
+
+       brew --prefix openssl
+
+    Modify the variable 
+   ...  
+   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl@3") #set your directory
+   ...
+   
+6. Create the build folder
+
+       mkdir build
+       cd build
+   
+7. Build & compile the files:
+
+       cmake ..
+       cmake --build .  
+  
+8. Run the main:
+
+        ./main  
