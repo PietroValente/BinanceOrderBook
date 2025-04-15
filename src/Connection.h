@@ -43,4 +43,5 @@ private:
     SSL* ssl;
     socket_t sockfd;
     bool performWebSocketHandshake();
+    void sendPongFrame(const std::string& payload);
 };

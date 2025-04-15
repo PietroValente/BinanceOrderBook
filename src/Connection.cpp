@@ -2,6 +2,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include "Connection.h"
 
@@ -129,11 +130,20 @@ void Connection::sendWebSocketMessage() {
     delete[] frame;
 }
 
+void Connection::sendPongFrame(const std::string& payload) {
+    std::vector<unsigned char> frame;
+    frame.push_back(0xA);
+    frame.push_back(static_cast<unsigned char>(payload.size()));
+    frame.insert(frame.end(), payload.begin(), payload.end());
+    SSL_write(ssl, frame.data(), static_cast<int>(frame.size()));
+}
+
 std::string Connection::receiveWebSocketMessage() {
     unsigned char buffer[4096];
     std::string completePayload;
     bool isPayloadComplete = false;
     std::size_t start;
+    std::size_t back;
 
     while (!isPayloadComplete) {
         int bytesRead = SSL_read(ssl, buffer, sizeof(buffer));
@@ -157,6 +167,14 @@ std::string Connection::receiveWebSocketMessage() {
             continue;
         }
 
+        if (bytesRead<15 && (buffer[0] & 0x0F) == 0x9) {
+            size_t payload_len = buffer[1] & 0x7F;
+            size_t header_len = 4;
+            std::string payload(reinterpret_cast<char*>(&buffer[header_len]), payload_len);
+            sendPongFrame(payload);
+            continue;
+        }
+
         completePayload.append(reinterpret_cast<char*>(buffer), bytesRead);
         if(completePayload.find("{") == std::string::npos){
             completePayload.clear(); 
@@ -164,9 +182,10 @@ std::string Connection::receiveWebSocketMessage() {
         else{
             start = completePayload.find("{");
         }
-        if (!completePayload.empty() && completePayload.back() == '}') {
+        if (!completePayload.empty() && completePayload.find("}") != std::string::npos) {
+            back = completePayload.find("}");
             isPayloadComplete = true;
         }
     }
-    return completePayload.substr(start);
+    return completePayload.substr(start, back - start + 1);
 }
